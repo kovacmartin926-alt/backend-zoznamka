@@ -1,3 +1,6 @@
 flask
 psycopg2-binary
 gunicorn
+google-generativeai
+g4f
+groq

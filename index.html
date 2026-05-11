@@ -1,103 +1,33 @@
-<!DOCTYPE html>
-<html lang="sk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zoznamka - Šifrovaná Komunikácia</title>
-    <style>
-        body {
-            background-color: #0d0d0d;
-            color: #00ff41;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        #chat-container {
-            width: 100%;
-            max-width: 500px;
-            border: 1px solid #00ff41;
-            padding: 20px;
-            background: #1a1a1a;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
-        }
-        #messages {
-            height: 300px;
-            overflow-y: auto;
-            border-bottom: 1px solid #333;
-            margin-bottom: 15px;
-            padding: 10px;
-        }
-        .msg { margin-bottom: 10px; border-left: 2px solid #00ff41; padding-left: 10px; }
-        .user-msg { color: #fff; }
-        .bot-msg { color: #00ff41; font-weight: bold; }
+async function poslat() {
+    const input = document.getElementById('userInput');
+    const window = document.getElementById('chat-window');
+    
+    // TENTO RIADOK JE DÔLEŽITÝ - musí brať aktuálnu hodnotu pri každom kliknutí!
+    const postava = document.getElementById('postava').value; 
+    
+    const text = input.value;
+
+    if (!text) return;
+
+    window.innerHTML += `<div class="msg user">>> TY: ${text}</div>`;
+    input.value = "";
+    window.scrollTop = window.scrollHeight;
+
+    try {
+        const res = await fetch('/poslat_spravu', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                postava: postava, // Tu sa posiela vybratá postava
+                text: text
+            })
+        });
+        const data = await res.json();
         
-        select, input, button {
-            background: #000;
-            color: #00ff41;
-            border: 1px solid #00ff41;
-            padding: 10px;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-        button:hover {
-            background: #00ff41;
-            color: #000;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-
-    <h2>TERMINÁL_ZOZNAMKA_V1</h2>
-
-    <div id="chat-container">
-        <div id="messages">
-            <div class="msg bot-msg">Systém: Vyberte identitu a začnite komunikáciu.</div>
-        </div>
-
-        <label for="postava">Identita cieľa:</label>
-        <select id="postava">
-            <option value="Admin">Admin</option>
-            <option value="Unknown_4">Unknown_4</option>
-            <option value="Sentinel">Sentinel</option>
-            <option value="Ghost">Ghost</option>
-        </select>
-
-        <input type="text" id="userInput" placeholder="Zadajte správu..." autocomplete="off">
-        <button onclick="poslatSpravu()">ODOSLAŤ</button>
-    </div>
-
-    <script>
-        async function poslatSpravu() {
-            const postava = document.getElementById('postava').value;
-            const input = document.getElementById('userInput');
-            const message = input.value;
-            const chatBox = document.getElementById('messages');
-
-            if (!message) return;
-
-            // Pridanie tvojej správy do chatu
-            chatBox.innerHTML += `<div class="msg user-msg">Vy: ${message}</div>`;
-            input.value = '';
-
-            try {
-                const response = await fetch('/poslat_spravu', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ postava: postava, text: message })
-                });
-
-                const data = await response.json();
-
-                // Pridanie odpovede z Flasku
-                chatBox.innerHTML += `<div class="msg bot-msg">${postava}: ${data.odpoved}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (error) {
-                chatBox.innerHTML += `<div class="msg" style="color:red">Chyba spojenia...</div>`;
-            }
-        }
-    </script>
-</body>
-</html>
+        // Zobrazenie odpovede so správnym menom
+        window.innerHTML += `<div class="msg bot"><strong>${postava.toUpperCase()}:</strong> ${data.odpoved}</div>`;
+    } catch (e) {
+        window.innerHTML += `<div class="msg bot" style="color:red">!!! ERROR !!!</div>`;
+    }
+    window.scrollTop = window.scrollHeight;
+}

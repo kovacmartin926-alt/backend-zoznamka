@@ -1,10 +1,10 @@
-from flask import Flask, request, jsonify, render_template
+``from flask import Flask, request, jsonify, render_template
 import os
 from groq import Groq
 
 app = Flask(__name__)
 
-client = Groq(api_key="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")
+client = Groq(api_key="......")  # Nahraďte "..." vaším skutečným API klíčem
 
 # Nové, prísnejšie inštrukcie pre stručnosť
 CHARAKTERY = {
