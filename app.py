@@ -1,107 +1,49 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify, render_template
+import os
+from groq import Groq
 
 app = Flask(__name__)
 
-databaza = {
-    "students": [
-        {
-            "id": 1,
-            "name": "Emma Švecová",
-            "age": 20,
-            "vyska": 168,
-            "hobby": "fotografovanie",
-            "image": "https://randomuser.me/api/portraits/women/1.jpg"
-        },
-        {
-            "id": 2,
-            "name": "Samuel Kováč",
-            "age": 23,
-            "vyska": 181,
-            "hobby": "fitness",
-            "image": "https://randomuser.me/api/portraits/men/2.jpg"
-        },
-        {
-            "id": 3,
-            "name": "Nina Hudecová",
-            "age": 19,
-            "vyska": 165,
-            "hobby": "maľovanie",
-            "image": "https://randomuser.me/api/portraits/women/3.jpg"
-        },
-        {
-            "id": 4,
-            "name": "Lukáš Benko",
-            "age": 26,
-            "vyska": 185,
-            "hobby": "cestovanie",
-            "image": "https://randomuser.me/api/portraits/men/4.jpg"
-        },
-        {
-            "id": 5,
-            "name": "Zuzana Bielová",
-            "age": 22,
-            "vyska": 170,
-            "hobby": "tanec",
-            "image": "https://randomuser.me/api/portraits/women/5.jpg"
-        },
-        {
-            "id": 6,
-            "name": "Jakub Farkaš",
-            "age": 24,
-            "vyska": 178,
-            "hobby": "programovanie",
-            "image": "https://randomuser.me/api/portraits/men/6.jpg"
-        },
-        {
-            "id": 7,
-            "name": "Laura Križanová",
-            "age": 21,
-            "vyska": 167,
-            "hobby": "yoga",
-            "image": "https://randomuser.me/api/portraits/women/7.jpg"
-        },
-        {
-            "id": 8,
-            "name": "Michal Urban",
-            "age": 27,
-            "vyska": 183,
-            "hobby": "hudba",
-            "image": "https://randomuser.me/api/portraits/men/8.jpg"
-        },
-        {
-            "id": 9,
-            "name": "Simona Černá",
-            "age": 18,
-            "vyska": 164,
-            "hobby": "knihy",
-            "image": "https://randomuser.me/api/portraits/women/9.jpg"
-        },
-        {
-            "id": 10,
-            "name": "Filip Marek",
-            "age": 25,
-            "vyska": 180,
-            "hobby": "gaming",
-            "image": "https://randomuser.me/api/portraits/men/10.jpg"
-        }
-    ]
+client = Groq(api_key="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")
+
+# Nové, prísnejšie inštrukcie pre stručnosť
+CHARAKTERY = {
+    "admin": "Si Admin. Odpovedaj extrémne stručne, chladne a k veci (max 10 slov). Žiadne omáčky. Si šéf.",
+    "fixer": "Si Fixer. Si pouličný kšeftár. Píš krátko, drsne a používaj slang. Zaujímajú ťa len prachy a biznis.",
+    "netrunner": "Si Netrunner. Si paranoidný hacker. Tvoje správy sú krátke, útržkovité a technické.",
+    "cipher": "Si Cipher. Hovoríš v hádankách a algoritmoch, ale píšeš veľmi málo. Buď tajomný."
 }
 
-@app.route("/")
+@app.route('/')
 def home():
-    return jsonify({"message": "🔥 Zoznamka backend beží!"})
+    return render_template('index.html')
 
-@app.route("/api")
-def api():
-    return jsonify(databaza)
+@app.route('/poslat_spravu', methods=['POST'])
+def chat():
+    data = request.json
+    postava_id = data.get('postava', '').lower()
+    user_text = data.get('text', '')
+    
+    # Pridali sme príkaz "Odpovedaj ako človek v chate, nie ako AI asistent"
+    system_instrukcia = CHARAKTERY.get(postava_id, "Si kontakt na darknete.") 
+    system_instrukcia += " Odpovedaj stručne ako v reálnom chate, nie ako robot. Maximálne dve krátke vety!"
 
-@app.route("/api/students/<int:student_id>")
-def find_students(student_id):
-    for student in databaza["students"]:
-        if student["id"] == student_id:
-            return jsonify(student)
-    return jsonify({"error": "Student not found"}), 404
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_instrukcia},
+                {"role": "user", "content": user_text}
+            ],
+            temperature=0.9, # Vyššia hodnota pre viac "ľudský" a menej robotický prejav
+            max_tokens=60    # Striktný limit na dĺžku odpovede
+        )
+        odpoved = completion.choices[0].message.content
+    except Exception as e:
+        print(f"Chyba: {e}")
+        odpoved = "SPOJENIE PRERUŠENÉ."
 
+    return jsonify({"odpoved": odpoved})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=10000, debug=True)
